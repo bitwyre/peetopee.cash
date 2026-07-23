@@ -1,64 +1,79 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type { Order } from "@/lib/types";
-import { impliedRate } from "@/components/OrderCard";
+import type { LatLng } from "@/lib/geo";
 import { useUser } from "@/lib/useUser";
+import OrderSheet from "@/components/OrderSheet";
 
-function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(s));
-}
+// Leaflet needs `window`; load the map only on the client.
+const CourierMap = dynamic(() => import("@/components/CourierMap"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full bg-zinc-900" />,
+});
 
 export default function CourierPage() {
   const { user } = useUser();
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[] | null>(null);
-  const [me, setMe] = useState<{ lat: number; lng: number } | null>(null);
-  const hasAddress = !!(user?.usdt_trc20 || user?.usdt_bep20 || user?.usdt_erc20);
+  const [me, setMe] = useState<LatLng | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [accepting, setAccepting] = useState<string | null>(null);
+
+  const canAccept = !!(user?.usdt_trc20 || user?.usdt_bep20 || user?.usdt_erc20);
 
   useEffect(() => {
     if (!user) return;
-    const load = () => api<Order[]>("/orders/open").then(setOrders).catch(() => setOrders([]));
+    const load = () =>
+      api<Order[]>("/orders/open")
+        .then((next) => {
+          setOrders(next);
+          // Clear a selection that is no longer open.
+          setSelectedId((cur) => (cur && next.some((o) => o.id === cur) ? cur : null));
+        })
+        .catch(() => setOrders([]));
     load();
     const t = setInterval(load, 10000);
-    navigator.geolocation?.getCurrentPosition((p) => setMe({ lat: p.coords.latitude, lng: p.coords.longitude }), () => {});
+    navigator.geolocation?.getCurrentPosition(
+      (p) => setMe({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      () => {}
+    );
     return () => clearInterval(t);
   }, [user]);
 
-  if (!orders) return <p className="text-zinc-500">Loading...</p>;
+  async function onAccept(id: string) {
+    setAccepting(id);
+    try {
+      await api(`/orders/${id}/accept`, { method: "POST" });
+      router.push(`/orders/${id}`);
+    } catch {
+      setAccepting(null);
+      // Refresh so an already-taken order drops off the board.
+      api<Order[]>("/orders/open").then(setOrders).catch(() => {});
+    }
+  }
 
   return (
-    <div>
-      <h1 className="mb-2 text-2xl font-bold">Courier board</h1>
-      <p className="mb-6 text-sm text-zinc-400">Open cash-delivery requests. Accept one, meet the customer, receive USDT, hand over cash.</p>
-      {!hasAddress && (
-        <p className="mb-4 rounded bg-amber-950 px-3 py-2 text-sm text-amber-300">
-          Add a USDT address in <Link href="/settings" className="underline">settings</Link> before accepting orders.
-        </p>
+    // Escape <main>'s max-w-3xl/padding: fixed, below the ~49px nav.
+    <div className="fixed inset-x-0 bottom-0 top-[49px] z-0">
+      {orders && (
+        <CourierMap orders={orders} me={me} selectedId={selectedId} onSelect={setSelectedId} />
       )}
-      {orders.length === 0 && <p className="text-zinc-400">No open orders right now.</p>}
-      <div className="space-y-3">
-        {orders.map((o) => (
-          <Link key={o.id} href={`/orders/${o.id}`}
-            className="block rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 hover:border-emerald-700">
-            <div className="flex items-center justify-between">
-              <span className="text-lg font-semibold">{parseFloat(o.fiat_amount).toLocaleString()} {o.fiat_currency}</span>
-              <span className="text-emerald-400">{parseFloat(o.usdt_amount).toLocaleString()} USDT</span>
-            </div>
-            <div className="mt-1 flex justify-between text-sm text-zinc-400">
-              <span>{impliedRate(o)}</span>
-              <span>{me ? `${haversineKm(me, o).toFixed(1)} km away` : new Date(o.created_at).toLocaleString()}</span>
-            </div>
-          </Link>
-        ))}
-      </div>
+      {!orders && <div className="flex h-full items-center justify-center text-zinc-500">Loading…</div>}
+      {orders && (
+        <OrderSheet
+          orders={orders}
+          me={me}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          onAccept={onAccept}
+          canAccept={canAccept}
+          accepting={accepting}
+        />
+      )}
     </div>
   );
 }
