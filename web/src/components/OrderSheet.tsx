@@ -70,7 +70,6 @@ export default function OrderSheet({
   return (
     <div
       className="pointer-events-none fixed inset-x-0 bottom-0 z-[1000] md:inset-y-0 md:right-auto md:left-0 md:w-96"
-      style={{ height: undefined }}
     >
       <div
         className="pointer-events-auto absolute inset-x-0 bottom-0 flex flex-col rounded-t-2xl border-t border-zinc-800 bg-zinc-950/95 backdrop-blur md:inset-0 md:h-full md:rounded-none md:border-r md:border-t-0"
@@ -82,6 +81,7 @@ export default function OrderSheet({
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
         >
           <div className="h-1.5 w-10 rounded-full bg-zinc-700" />
         </div>
