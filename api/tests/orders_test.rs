@@ -106,5 +106,5 @@ async fn open_order_detail_hides_private_fields(pool: PgPool) {
     assert_eq!(v["is_customer"], false);
     assert_eq!(v["address_text"], "");
     assert_eq!(v["lat"], -8.67);
-    assert_eq!(v["lng"], 115.21);
+    assert_eq!(v["lng"], 115.215);
 }

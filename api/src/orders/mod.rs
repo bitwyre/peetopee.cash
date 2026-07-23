@@ -21,11 +21,11 @@ pub struct CreateOrder {
     pub lng: f64,
 }
 
-/// Coarsen an order for non-party viewers: ~1km coordinates, no street address.
+/// Coarsen an order for non-party viewers: ~500m grid, no street address.
 fn redact_location(mut order: Order) -> Order {
     order.address_text = String::new();
-    order.lat = (order.lat * 100.0).round() / 100.0;
-    order.lng = (order.lng * 100.0).round() / 100.0;
+    order.lat = (order.lat * 200.0).round() / 200.0;
+    order.lng = (order.lng * 200.0).round() / 200.0;
     order
 }
 
@@ -135,4 +135,51 @@ pub async fn get_detail(
         }
     }
     Ok(Json(detail))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+    use rust_decimal::Decimal;
+    use uuid::Uuid;
+
+    fn sample(lat: f64, lng: f64) -> Order {
+        Order {
+            id: Uuid::nil(),
+            customer_id: Uuid::nil(),
+            courier_id: None,
+            fiat_currency: "IDR".into(),
+            fiat_amount: Decimal::ZERO,
+            usdt_amount: Decimal::ZERO,
+            address_text: "Jl. Sunset Road 99, Kuta".into(),
+            lat,
+            lng,
+            status: "OPEN".into(),
+            payment_network: None,
+            payment_txid: None,
+            payment_requested_at: None,
+            paid_at: None,
+            created_at: Utc::now(),
+            accepted_at: None,
+            completed_at: None,
+            cancelled_at: None,
+        }
+    }
+
+    #[test]
+    fn redact_snaps_to_500m_grid_and_blanks_address() {
+        let r = redact_location(sample(-8.6705, 115.2126));
+        assert_eq!(r.lat, -8.67);
+        assert_eq!(r.lng, 115.215);
+        assert_eq!(r.address_text, "");
+    }
+
+    #[test]
+    fn redact_grid_is_finer_than_one_decimal() {
+        // A point ~600m east must land on a different grid cell than the origin.
+        let a = redact_location(sample(0.0, 0.0));
+        let b = redact_location(sample(0.0, 0.0055));
+        assert_ne!(a.lng, b.lng);
+    }
 }
