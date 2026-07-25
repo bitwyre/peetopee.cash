@@ -61,14 +61,13 @@ function MapController({ orders, me, selectedId }: Omit<CourierMapProps, "onSele
 }
 
 export default function CourierMap({ orders, me, selectedId, onSelect }: CourierMapProps) {
-  const center: L.LatLngExpression = me
-    ? [me.lat, me.lng]
-    : orders[0]
-    ? [orders[0].lat, orders[0].lng]
-    : [0, 0];
+  const anchor = me ?? orders[0] ?? null;
+  const center: L.LatLngExpression = anchor ? [anchor.lat, anchor.lng] : [20, 0];
+  // With no location or orders to anchor on, show the whole world instead of mid-ocean.
+  const zoom = anchor ? 13 : 2;
 
   return (
-    <MapContainer center={center} zoom={13} className="h-full w-full" zoomControl={false}>
+    <MapContainer center={center} zoom={zoom} className="h-full w-full" zoomControl={false}>
       <TileLayer
         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution="&copy; OpenStreetMap contributors"
