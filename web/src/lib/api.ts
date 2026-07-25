@@ -17,5 +17,9 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {}
     throw new ApiError(res.status, msg);
   }
-  return (await res.json()) as T;
+  // Some endpoints (auth/request-link, logout, order transitions) return an empty
+  // 2xx body. Parsing "" as JSON throws "Unexpected end of JSON input", so only
+  // parse when there is actually a body to parse.
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
