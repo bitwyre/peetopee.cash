@@ -15,7 +15,7 @@ concurrency:
 jobs:
   deploy:
     name: Build, deploy & restart
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     steps:
       # No actions/checkout — we operate directly on the live checkout at /opt/peetopee.
       - name: Pull, build, restart
