@@ -4,3 +4,4 @@
 /web/.next
 .env
 .DS_Store
+/web/tsconfig.tsbuildinfo
