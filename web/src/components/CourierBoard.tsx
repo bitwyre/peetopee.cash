@@ -48,14 +48,30 @@ export default function CourierBoard() {
           setGeo("granted");
         },
         () => setGeo("denied"),
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        // High accuracy needs GPS and often times out on laptops; a coarse
+        // wifi/IP fix is plenty to centre the map on the right city.
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
       );
     },
     []
   );
 
-  // Ask for location once on mount.
-  useEffect(() => locate(), [locate]);
+  // Ask for location on mount. If the browser already remembers a decision,
+  // honour it; otherwise this triggers the permission popup.
+  useEffect(() => {
+    const perms = (navigator as Navigator & { permissions?: Permissions }).permissions;
+    if (perms?.query) {
+      perms
+        .query({ name: "geolocation" as PermissionName })
+        .then((s) => {
+          if (s.state === "denied") setGeo("denied");
+          else locate(); // "granted" resolves silently, "prompt" shows the popup
+        })
+        .catch(() => locate());
+    } else {
+      locate();
+    }
+  }, [locate]);
 
   // Live orders require auth (/orders/open); only poll when signed in.
   useEffect(() => {
@@ -99,14 +115,22 @@ export default function CourierBoard() {
 
       {/* Locate control — floats above the sheet, only while we don't have a fix. */}
       {geo !== "granted" && (
-        <button
-          onClick={locate}
-          disabled={geo === "locating"}
-          className="absolute right-3 top-3 z-[1100] flex items-center gap-2 rounded-full border border-zinc-700 bg-zinc-900/90 px-3 py-2 text-sm font-medium text-zinc-100 shadow-lg backdrop-blur hover:border-emerald-600 disabled:opacity-60 md:left-[25rem] md:right-auto"
-        >
-          <span aria-hidden>📍</span>
-          {geo === "locating" ? "Locating…" : geo === "denied" ? "Enable location" : "Use my location"}
-        </button>
+        <div className="absolute right-3 top-3 z-[1100] flex max-w-[16rem] flex-col items-end gap-2 md:left-[25rem] md:right-auto md:items-start">
+          <button
+            onClick={locate}
+            disabled={geo === "locating"}
+            className="flex items-center gap-2 rounded-full border border-zinc-700 bg-zinc-900/90 px-3 py-2 text-sm font-medium text-zinc-100 shadow-lg backdrop-blur hover:border-emerald-600 disabled:opacity-60"
+          >
+            <span aria-hidden>📍</span>
+            {geo === "locating" ? "Locating…" : geo === "denied" ? "Enable location" : "Use my location"}
+          </button>
+          {geo === "denied" && (
+            <p className="rounded-lg border border-zinc-800 bg-zinc-950/95 px-3 py-2 text-xs text-zinc-400 shadow-lg backdrop-blur">
+              Location is blocked. Tap the 🔒 in the address bar → Location → Allow, then reload to
+              centre the map on you.
+            </p>
+          )}
+        </div>
       )}
 
       {user ? (

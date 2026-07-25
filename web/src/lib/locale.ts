@@ -22,7 +22,7 @@ export type MapView = { center: LatLng; zoom: number };
 // A sensible opening map view per region, so a visitor who hasn't granted
 // location still lands somewhere familiar instead of mid-ocean.
 const REGION_VIEW: Record<string, MapView> = {
-  ID: { center: { lat: -6.21, lng: 106.85 }, zoom: 11 }, // Jakarta
+  ID: { center: { lat: -8.65, lng: 115.216 }, zoom: 11 }, // Denpasar, Bali (this app's home base)
   AE: { center: { lat: 25.2, lng: 55.27 }, zoom: 11 }, // Dubai
   GB: { center: { lat: 51.51, lng: -0.12 }, zoom: 10 }, // London
   RU: { center: { lat: 55.75, lng: 37.62 }, zoom: 10 }, // Moscow
