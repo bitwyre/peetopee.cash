@@ -105,6 +105,18 @@ export default function OrderSheet({
         </div>
 
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-6">
+          {sorted.length === 0 && (
+            <div className="flex h-full flex-col items-center justify-center gap-2 py-10 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900 text-2xl">
+                🗺️
+              </div>
+              <p className="text-sm font-medium text-zinc-300">No open orders nearby</p>
+              <p className="max-w-[15rem] text-xs text-zinc-500">
+                This board refreshes every few seconds. New orders in your area will appear here
+                automatically.
+              </p>
+            </div>
+          )}
           {sorted.map((o) => {
             const selected = o.id === selectedId;
             const dist = me ? `${haversineKm(me, o).toFixed(1)} km` : "—";

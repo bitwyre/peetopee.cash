@@ -12,6 +12,8 @@ interface CourierMapProps {
   me: LatLng | null;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  // Where to open when there is no location or order to anchor on (locale-derived).
+  defaultView?: { center: LatLng; zoom: number };
 }
 
 // divIcon avoids Leaflet's default marker asset paths, which break under bundlers.
@@ -60,11 +62,15 @@ function MapController({ orders, me, selectedId }: Omit<CourierMapProps, "onSele
   return null;
 }
 
-export default function CourierMap({ orders, me, selectedId, onSelect }: CourierMapProps) {
+export default function CourierMap({ orders, me, selectedId, onSelect, defaultView }: CourierMapProps) {
   const anchor = me ?? orders[0] ?? null;
-  const center: L.LatLngExpression = anchor ? [anchor.lat, anchor.lng] : [20, 0];
-  // With no location or orders to anchor on, show the whole world instead of mid-ocean.
-  const zoom = anchor ? 13 : 2;
+  // Anchor on the courier/first order; otherwise open at the locale-derived view.
+  const center: L.LatLngExpression = anchor
+    ? [anchor.lat, anchor.lng]
+    : defaultView
+    ? [defaultView.center.lat, defaultView.center.lng]
+    : [25, 15];
+  const zoom = anchor ? 13 : defaultView?.zoom ?? 3;
 
   return (
     <MapContainer center={center} zoom={zoom} className="h-full w-full" zoomControl={false}>

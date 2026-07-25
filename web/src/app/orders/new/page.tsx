@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { CURRENCIES, type Currency, type Order } from "@/lib/types";
+import { detectCurrency } from "@/lib/locale";
 import { useUser } from "@/lib/useUser";
 
 const MapPicker = dynamic(() => import("@/components/MapPicker"), { ssr: false });
@@ -16,12 +17,18 @@ export default function NewOrderPage() {
   const router = useRouter();
   const { user, loading } = useUser();
   const [currency, setCurrency] = useState<Currency>("IDR");
+  const [currencyTouched, setCurrencyTouched] = useState(false);
   const [fiatAmount, setFiatAmount] = useState("");
   const [usdtAmount, setUsdtAmount] = useState("");
   const [address, setAddress] = useState("");
   const [pos, setPos] = useState(DEFAULT_POS);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Default the currency from the visitor's locale, until they pick one themselves.
+  useEffect(() => {
+    if (!currencyTouched) setCurrency(detectCurrency());
+  }, [currencyTouched]);
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
@@ -69,7 +76,10 @@ export default function NewOrderPage() {
             <span className="mb-1 block text-sm text-zinc-400">Currency</span>
             <select
               value={currency}
-              onChange={(e) => setCurrency(e.target.value as Currency)}
+              onChange={(e) => {
+                setCurrencyTouched(true);
+                setCurrency(e.target.value as Currency);
+              }}
               className="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2"
             >
               {CURRENCIES.map((c) => (
